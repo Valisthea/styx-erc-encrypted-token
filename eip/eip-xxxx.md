@@ -2,7 +2,7 @@
 eip: TBD
 title: Encrypted Token Standard
 description: A standard interface for tokens with fully homomorphic encrypted balances and zero-knowledge transfer verification.
-author: Kairos Lab (@Valisthea)
+author: Valisthea (@Valisthea)
 discussions-to: https://ethereum-magicians.org/
 status: Draft
 type: Standards Track
