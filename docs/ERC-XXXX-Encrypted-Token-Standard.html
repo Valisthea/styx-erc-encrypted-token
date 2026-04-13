@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERC-XXXX: Encrypted Token Standard — STYX Protocol</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface-2: #161616;
+  --border: #1f2937;
+  --border-hover: #333;
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-dim: #6b7280;
+  --accent: #7C3AED;
+  --accent-glow: rgba(124,58,237,0.15);
+  --fire-1: #f97316;
+  --fire-2: #dc2626;
+  --cyan: #0891b2;
+  --green: #10b981;
+  --amber: #d97706;
+  --heading: 'Cormorant Garamond', Georgia, serif;
+  --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --body: 'Cormorant Garamond', Georgia, serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 18px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grain overlay */
+body::before {
+  content:'';
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999;
+}
+
+/* Header */
+.erc-header {
+  text-align:center;
+  padding: 100px 40px 80px;
+  position:relative;
+  border-bottom: 1px solid var(--border);
+}
+.erc-header::after {
+  content:'';
+  position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+  width:60px; height:1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.erc-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+.erc-title {
+  font-family: var(--heading);
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 300;
+  letter-spacing: 2px;
+  color: var(--text);
+  line-height: 1.1;
+}
+.erc-title em {
+  font-style: italic;
+  display: block;
+  font-size: 0.4em;
+  color: var(--text-dim);
+  margin-top: 8px;
+  letter-spacing: 4px;
+}
+.erc-subtitle {
+  font-family: var(--heading);
+  font-size: 20px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--text-dim);
+  margin-top: 32px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Preamble table */
+.preamble {
+  max-width: 560px;
+  margin: 48px auto 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.preamble-row {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.preamble-row:last-child { border-bottom: none; }
+.preamble-key {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  padding: 10px 16px;
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.preamble-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  flex: 1;
+}
+.preamble-val a { color: var(--accent); text-decoration: none; }
+.preamble-val a:hover { text-decoration: underline; }
+.status-badge {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: rgba(249,115,22,0.15);
+  color: var(--fire-1);
+}
+
+/* Main content */
+.content {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 40px 120px;
+}
+
+/* Section */
+.section {
+  padding-top: 64px;
+}
+.section h2 {
+  font-family: var(--heading);
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 24px;
+  position: relative;
+  padding-left: 24px;
+}
+.section h2::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px;
+  width: 4px; height: 24px;
+  background: linear-gradient(180deg, var(--accent), var(--fire-2));
+  border-radius: 2px;
+}
+.section h3 {
+  font-family: var(--heading);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--text);
+  margin-top: 40px;
+  margin-bottom: 16px;
+}
+.section h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+.section p {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  font-weight: 300;
+}
+.section ol, .section ul {
+  color: var(--text-muted);
+  font-weight: 300;
+  padding-left: 24px;
+  margin-bottom: 16px;
+}
+.section li {
+  margin-bottom: 8px;
+}
+.section strong { color: var(--text); font-weight: 500; }
+.section code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--cyan);
+}
+
+/* Code blocks */
+.code-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 20px 0 24px;
+  overflow-x: auto;
+  position: relative;
+}
+.code-block::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 8px; right: 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.code-block pre {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  white-space: pre;
+  margin: 0;
+}
+.code-block .kw { color: var(--accent); }
+.code-block .fn { color: var(--fire-1); }
+.code-block .tp { color: var(--cyan); }
+.code-block .cm { color: #4b5563; font-style: italic; }
+.code-block .str { color: var(--green); }
+.code-block .ev { color: var(--amber); }
+
+/* Tables */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 24px;
+  font-size: 14px;
+}
+.spec-table th {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.spec-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #111;
+  color: var(--text-muted);
+  font-weight: 300;
+  vertical-align: top;
+}
+.spec-table tr:hover td {
+  background: rgba(255,255,255,0.015);
+}
+.spec-table code {
+  font-size: 12px;
+}
+
+/* Callout */
+.callout {
+  border-left: 3px solid;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-radius: 0 8px 8px 0;
+  font-size: 15px;
+}
+.callout-info {
+  border-color: var(--cyan);
+  background: rgba(8,145,178,0.06);
+}
+.callout-warn {
+  border-color: var(--fire-1);
+  background: rgba(249,115,22,0.06);
+}
+.callout-security {
+  border-color: var(--fire-2);
+  background: rgba(220,38,38,0.06);
+}
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* Interface block — the hero piece */
+.interface-block {
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 32px 0;
+  position: relative;
+}
+.interface-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--fire-1), var(--accent));
+}
+.interface-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.interface-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.interface-file {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.interface-body {
+  padding: 24px;
+  background: var(--surface);
+  overflow-x: auto;
+}
+.interface-body pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  white-space: pre;
+  margin: 0;
+}
+
+/* Nav TOC */
+.toc {
+  position: fixed;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+}
+.toc a {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-right: 1px solid var(--border);
+  text-align: right;
+  transition: all 0.3s;
+}
+.toc a:hover {
+  color: var(--accent);
+  border-right-color: var(--accent);
+}
+
+/* Footer */
+.erc-footer {
+  text-align: center;
+  padding: 60px 40px;
+  border-top: 1px solid var(--border);
+}
+.erc-footer p {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.erc-footer a { color: var(--accent); text-decoration: none; }
+
+@media (max-width: 900px) {
+  .toc { display: none; }
+  .content { padding: 0 24px 80px; }
+  .erc-header { padding: 60px 24px 48px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOC -->
+<nav class="toc">
+  <a href="#abstract">Abstract</a>
+  <a href="#motivation">Motivation</a>
+  <a href="#spec">Specification</a>
+  <a href="#interface">Interface</a>
+  <a href="#rationale">Rationale</a>
+  <a href="#compat">Compatibility</a>
+  <a href="#security">Security</a>
+</nav>
+
+<!-- Header -->
+<header class="erc-header">
+  <div class="erc-eyebrow">Kairos Lab · Styx Protocol</div>
+  <h1 class="erc-title">
+    ERC-XXXX
+    <em>Encrypted Token Standard</em>
+  </h1>
+  <p class="erc-subtitle">
+    A standard interface for tokens with fully homomorphic encrypted balances and zero-knowledge transfer verification.
+  </p>
+
+  <div class="preamble">
+    <div class="preamble-row">
+      <div class="preamble-key">eip</div>
+      <div class="preamble-val">TBD</div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">title</div>
+      <div class="preamble-val">Encrypted Token Standard</div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">author</div>
+      <div class="preamble-val"><a href="https://github.com/Valisthea">Kairos Lab (@Valisthea)</a></div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">status</div>
+      <div class="preamble-val"><span class="status-badge">Draft</span></div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">type</div>
+      <div class="preamble-val">Standards Track</div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">category</div>
+      <div class="preamble-val">ERC</div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">created</div>
+      <div class="preamble-val">2026-04-12</div>
+    </div>
+    <div class="preamble-row">
+      <div class="preamble-key">requires</div>
+      <div class="preamble-val">165, 20</div>
+    </div>
+  </div>
+</header>
+
+<!-- Content -->
+<main class="content">
+
+  <!-- Abstract -->
+  <div class="section" id="abstract">
+    <h2>Abstract</h2>
+    <p>
+      This standard defines a minimal interface for <strong>fungible tokens with encrypted balances</strong>. Token balances are stored as Fully Homomorphic Encryption (FHE) ciphertexts. Transfers are verified via zero-knowledge proofs without revealing amounts, sender balances, or recipient balances to any on-chain observer.
+    </p>
+    <p>
+      Unlike ERC-20 where <code>balanceOf</code> returns a plaintext <code>uint256</code>, this standard returns an opaque ciphertext that only the balance owner can decrypt. Arithmetic operations on balances (credit, debit, comparison) are performed homomorphically by the execution environment without any party observing plaintext values.
+    </p>
+    <p>
+      This standard is backwards-compatible with ERC-20 for public aggregate values (<code>totalSupply</code>, <code>name</code>, <code>symbol</code>, <code>decimals</code>) while introducing encrypted counterparts for all privacy-sensitive operations.
+    </p>
+  </div>
+
+  <!-- Motivation -->
+  <div class="section" id="motivation">
+    <h2>Motivation</h2>
+    <p>
+      ERC-20 tokens expose all balances and transfer amounts publicly. This creates several critical problems:
+    </p>
+    <ol>
+      <li><strong>Portfolio exposure</strong> — Anyone can see how much of any token an address holds, enabling targeted attacks, social engineering, and front-running.</li>
+      <li><strong>Transfer surveillance</strong> — Every transfer amount is public, enabling transaction graph analysis, de-anonymization, and MEV extraction.</li>
+      <li><strong>Governance coercion</strong> — In DAO voting with token-weighted governance, visible balances enable vote buying, whale tracking, and political coercion.</li>
+      <li><strong>Regulatory conflict</strong> — Financial privacy regulations (GDPR Article 17, MiCA, HIPAA for health tokens) conflict with permanent public ledger storage.</li>
+      <li><strong>MEV extraction</strong> — Visible pending transactions enable sandwich attacks, front-running, and other MEV strategies that extract value from users.</li>
+    </ol>
+
+    <h3>Why not just use ERC-20 with a privacy layer?</h3>
+    <p>
+      Privacy layers (Tornado Cash, Aztec Connect) are external wrappers. They break composability: a "shielded" token cannot be used in Uniswap, Aave, or Compound without unshielding first — defeating the purpose. This standard makes privacy <strong>native to the token interface</strong>. A compliant lending protocol can accept encrypted collateral, compute liquidation thresholds homomorphically, and never see the actual collateral amount.
+    </p>
+  </div>
+
+  <!-- Specification -->
+  <div class="section" id="spec">
+    <h2>Specification</h2>
+
+    <h4>Definitions</h4>
+    <table class="spec-table">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ciphertext</strong></td><td>An FHE-encrypted value. Represented on-chain as <code>bytes</code>. Only the owner of the corresponding decryption key can recover the plaintext.</td></tr>
+        <tr><td><strong>Proof</strong></td><td>A zero-knowledge proof (SNARK/STARK) attesting to the validity of an operation without revealing the operands.</td></tr>
+        <tr><td><strong>Blind Transfer</strong></td><td>A transfer where the amount is encrypted. The proof guarantees: (a) sender has sufficient balance, (b) amount is non-negative, (c) no overflow, (d) balances correctly updated.</td></tr>
+        <tr><td><strong>Selective Disclosure</strong></td><td>The ability for a balance owner to prove a property of their balance (e.g., "≥ 1000") without revealing the exact value.</td></tr>
+        <tr><td><strong>Re-encryption</strong></td><td>Transforming a ciphertext from the contract's public key to the user's personal key, off-chain, so only the user can decrypt.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Interface -->
+  <div class="section" id="interface">
+    <h2>Core Interface</h2>
+
+    <div class="interface-block">
+      <div class="interface-header">
+        <span class="interface-label">Solidity Interface</span>
+        <span class="interface-file">IERCXXXX.sol</span>
+      </div>
+      <div class="interface-body">
+<pre><span class="cm">// SPDX-License-Identifier: CC0-1.0</span>
+<span class="kw">pragma solidity</span> >=0.8.0;
+
+<span class="cm">/// @title ERC-XXXX Encrypted Token Standard</span>
+<span class="kw">interface</span> <span class="tp">IERCXXXX</span> {
+
+    <span class="cm">// ─── Events ───────────────────────────────────</span>
+
+    <span class="kw">event</span> <span class="ev">BlindTransfer</span>(
+        <span class="tp">address</span> <span class="kw">indexed</span> from,
+        <span class="tp">address</span> <span class="kw">indexed</span> to,
+        <span class="tp">bytes32</span> <span class="kw">indexed</span> proofHash
+    );
+
+    <span class="kw">event</span> <span class="ev">BlindApproval</span>(
+        <span class="tp">address</span> <span class="kw">indexed</span> owner,
+        <span class="tp">address</span> <span class="kw">indexed</span> spender
+    );
+
+    <span class="kw">event</span> <span class="ev">BlindMint</span>(<span class="tp">address</span> <span class="kw">indexed</span> to, <span class="tp">bytes32</span> <span class="kw">indexed</span> proofHash);
+    <span class="kw">event</span> <span class="ev">BlindBurn</span>(<span class="tp">address</span> <span class="kw">indexed</span> from, <span class="tp">bytes32</span> <span class="kw">indexed</span> proofHash);
+
+    <span class="cm">// ─── ERC-20 Compatible (Public Metadata) ──────</span>
+
+    <span class="kw">function</span> <span class="fn">name</span>() <span class="kw">external view returns</span> (<span class="tp">string memory</span>);
+    <span class="kw">function</span> <span class="fn">symbol</span>() <span class="kw">external view returns</span> (<span class="tp">string memory</span>);
+    <span class="kw">function</span> <span class="fn">decimals</span>() <span class="kw">external view returns</span> (<span class="tp">uint8</span>);
+    <span class="kw">function</span> <span class="fn">totalSupply</span>() <span class="kw">external view returns</span> (<span class="tp">uint256</span>);
+
+    <span class="cm">// ─── Encrypted Balance Queries ─────────────────</span>
+
+    <span class="kw">function</span> <span class="fn">encryptedBalanceOf</span>(<span class="tp">address</span> account)
+        <span class="kw">external view returns</span> (<span class="tp">bytes memory</span>);
+
+    <span class="kw">function</span> <span class="fn">encryptionScheme</span>()
+        <span class="kw">external view returns</span> (<span class="tp">string memory</span>);
+
+    <span class="kw">function</span> <span class="fn">publicKey</span>()
+        <span class="kw">external view returns</span> (<span class="tp">bytes memory</span>);
+
+    <span class="cm">// ─── Blind Transfers ──────────────────────────</span>
+
+    <span class="kw">function</span> <span class="fn">blindTransfer</span>(
+        <span class="tp">address</span> to,
+        <span class="tp">bytes calldata</span> encryptedAmount,
+        <span class="tp">bytes calldata</span> proof
+    ) <span class="kw">external returns</span> (<span class="tp">bool</span>);
+
+    <span class="kw">function</span> <span class="fn">blindTransferFrom</span>(
+        <span class="tp">address</span> from,
+        <span class="tp">address</span> to,
+        <span class="tp">bytes calldata</span> encryptedAmount,
+        <span class="tp">bytes calldata</span> proof
+    ) <span class="kw">external returns</span> (<span class="tp">bool</span>);
+
+    <span class="cm">// ─── Encrypted Approvals ──────────────────────</span>
+
+    <span class="kw">function</span> <span class="fn">blindApprove</span>(
+        <span class="tp">address</span> spender,
+        <span class="tp">bytes calldata</span> encryptedAmount,
+        <span class="tp">bytes calldata</span> proof
+    ) <span class="kw">external returns</span> (<span class="tp">bool</span>);
+
+    <span class="kw">function</span> <span class="fn">encryptedAllowance</span>(
+        <span class="tp">address</span> owner,
+        <span class="tp">address</span> spender
+    ) <span class="kw">external view returns</span> (<span class="tp">bytes memory</span>);
+
+    <span class="cm">// ─── Selective Disclosure (OPTIONAL) ──────────</span>
+
+    <span class="kw">function</span> <span class="fn">verifyBalancePredicate</span>(
+        <span class="tp">address</span> account,
+        <span class="tp">bytes calldata</span> predicate,
+        <span class="tp">bytes calldata</span> proof
+    ) <span class="kw">external view returns</span> (<span class="tp">bool</span>);
+
+    <span class="cm">// ─── Mint / Burn (OPTIONAL) ───────────────────</span>
+
+    <span class="kw">function</span> <span class="fn">blindMint</span>(
+        <span class="tp">address</span> to,
+        <span class="tp">bytes calldata</span> encryptedAmount,
+        <span class="tp">bytes calldata</span> proof
+    ) <span class="kw">external</span>;
+
+    <span class="kw">function</span> <span class="fn">blindBurn</span>(
+        <span class="tp">bytes calldata</span> encryptedAmount,
+        <span class="tp">bytes calldata</span> proof
+    ) <span class="kw">external</span>;
+}</pre>
+      </div>
+    </div>
+
+    <h3>Predicate Encoding</h3>
+    <div class="code-block" data-lang="solidity">
+<pre><span class="kw">enum</span> <span class="tp">PredicateType</span> {
+    GTE,    <span class="cm">// balance >= threshold</span>
+    LTE,    <span class="cm">// balance <= threshold</span>
+    EQ,     <span class="cm">// balance == threshold</span>
+    NEQ,    <span class="cm">// balance != threshold</span>
+    RANGE   <span class="cm">// lower <= balance <= upper</span>
+}
+
+<span class="cm">// Encoding:</span>
+<span class="cm">// predicate = abi.encode(PredicateType, threshold)</span>
+<span class="cm">// For RANGE: abi.encode(PredicateType.RANGE, lower, upper)</span></pre>
+    </div>
+
+    <h3>Proof Public Inputs</h3>
+    <div class="code-block" data-lang="struct">
+<pre>publicInputs = {
+    from:                <span class="tp">address</span>,    <span class="cm">// sender</span>
+    to:                  <span class="tp">address</span>,    <span class="cm">// recipient</span>
+    encryptedAmountHash: <span class="tp">bytes32</span>,    <span class="cm">// hash of encrypted amount</span>
+    oldBalanceHashFrom:  <span class="tp">bytes32</span>,    <span class="cm">// sender pre-transfer hash</span>
+    newBalanceHashFrom:  <span class="tp">bytes32</span>,    <span class="cm">// sender post-transfer hash</span>
+    oldBalanceHashTo:    <span class="tp">bytes32</span>,    <span class="cm">// recipient pre-transfer hash</span>
+    newBalanceHashTo:    <span class="tp">bytes32</span>,    <span class="cm">// recipient post-transfer hash</span>
+    nonce:               <span class="tp">uint256</span>     <span class="cm">// replay protection</span>
+}</pre>
+    </div>
+
+    <h3>Shield / Unshield Bridge</h3>
+    <p>A token MAY implement both ERC-20 and this standard simultaneously, with bridge functions to move between pools:</p>
+    <div class="code-block" data-lang="solidity">
+<pre><span class="cm">/// Move tokens from public ERC-20 balance to encrypted balance.</span>
+<span class="kw">function</span> <span class="fn">shield</span>(<span class="tp">uint256</span> amount) <span class="kw">external</span>;
+
+<span class="cm">/// Move tokens from encrypted balance to public ERC-20 balance.</span>
+<span class="kw">function</span> <span class="fn">unshield</span>(<span class="tp">uint256</span> amount, <span class="tp">bytes calldata</span> proof) <span class="kw">external</span>;</pre>
+    </div>
+  </div>
+
+  <!-- Rationale -->
+  <div class="section" id="rationale">
+    <h2>Rationale</h2>
+
+    <h3>Why encrypted balances instead of commitments?</h3>
+    <p>
+      Commitment schemes (Pedersen, Poseidon) hide values but don't support computation. You can't add two Pedersen commitments and get a valid commitment to the sum without the sender's help. FHE ciphertexts support <strong>homomorphic addition and comparison natively</strong>, enabling the contract to update balances without any party revealing plaintext values.
+    </p>
+
+    <h3>Why separate events without amounts?</h3>
+    <p>
+      ERC-20's <code>Transfer(from, to, amount)</code> leaks the amount. <code>BlindTransfer(from, to, proofHash)</code> preserves the minimum information needed for indexing (who transferred to whom) without revealing how much. The <code>proofHash</code> enables off-chain auditors (with appropriate keys) to verify transfer validity.
+    </p>
+
+    <h3>Why <code>verifyBalancePredicate</code> instead of <code>balanceOf</code>?</h3>
+    <p>
+      In DeFi, you rarely need the exact balance. You need to know "does this user have enough collateral?" — a predicate: <code>balance ≥ threshold</code>. Selective disclosure via predicate proofs gives protocols exactly the information they need, and nothing more.
+    </p>
+
+    <div class="callout callout-info">
+      <p><strong>Composability preserved.</strong> A lending protocol implementing this standard can check <code>verifyBalancePredicate(borrower, abi.encode(GTE, minCollateral), proof)</code> to verify collateral sufficiency without ever learning the borrower's actual balance.</p>
+    </div>
+  </div>
+
+  <!-- Backwards Compatibility -->
+  <div class="section" id="compat">
+    <h2>Backwards Compatibility</h2>
+    <p>
+      This standard is fully backwards-compatible with ERC-20 for metadata queries. Tokens implementing this standard alongside ERC-20 can participate in both the public and encrypted ecosystems.
+    </p>
+    <p>
+      Wallets that do not support this standard will display the token name and symbol but will show a balance of 0 (since <code>balanceOf</code> returns the public pool balance, which may be empty if all tokens are shielded).
+    </p>
+    <p>
+      This standard REQUIRES ERC-165 for interface detection, allowing protocols to query whether a token supports encrypted operations before attempting them.
+    </p>
+  </div>
+
+  <!-- Security -->
+  <div class="section" id="security">
+    <h2>Security Considerations</h2>
+
+    <div class="callout callout-security">
+      <p><strong>Critical: FHE Key Management.</strong> The contract's FHE secret key is the most sensitive asset. If compromised, all balances are exposed. Implementations MUST use threshold key management (Shamir SSS with ≥ 5 custodians) or HSMs. The STYX Protocol extends this with the Oblivion ceremony for provable key destruction.</p>
+    </div>
+
+    <table class="spec-table">
+      <thead><tr><th>Threat</th><th>Vector</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Ciphertext malleability</strong></td>
+          <td>FHE ciphertexts are malleable by design</td>
+          <td>ZK proof binds ciphertext to operation; verify before state update</td>
+        </tr>
+        <tr>
+          <td><strong>Proof replay</strong></td>
+          <td>Re-submitting a valid proof</td>
+          <td>Nonce registry; reject previously-used nonces</td>
+        </tr>
+        <tr>
+          <td><strong>Side-channel leakage</strong></td>
+          <td>Gas / timing / access patterns</td>
+          <td>Constant-size proofs; uniform circuit compilation</td>
+        </tr>
+        <tr>
+          <td><strong>Quantum threat</strong></td>
+          <td>Shor's algorithm on ZK proofs</td>
+          <td>Lattice-based FHE is quantum-safe; use PQ-safe proof system</td>
+        </tr>
+        <tr>
+          <td><strong>Key compromise</strong></td>
+          <td>FHE secret key extraction</td>
+          <td>Threshold key mgmt (Shamir SSS ≥ 5); Oblivion ceremony</td>
+        </tr>
+        <tr>
+          <td><strong>Share inflation</strong></td>
+          <td>Vault first-depositor attack analog</td>
+          <td>Minimum initial deposit; virtual shares</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <p><strong>Metadata leakage.</strong> While balances and amounts are encrypted, transaction timing, gas costs, and access patterns remain public. Implementations SHOULD pad all transactions to uniform gas consumption.</p>
+    </div>
+  </div>
+
+  <!-- Copyright -->
+  <div class="section">
+    <h2>Copyright</h2>
+    <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/" style="color:var(--accent)">CC0</a>.</p>
+  </div>
+
+</main>
+
+<footer class="erc-footer">
+  <p>ERC-XXXX Draft · <a href="https://github.com/Valisthea">Kairos Lab</a> · STYX Protocol · 2026</p>
+</footer>
+
+</body>
+</html>
