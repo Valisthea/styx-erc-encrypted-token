@@ -1,52 +1,83 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity >=0.8.0;
 
-/// @title ERC-XXXX Encrypted Token Standard
+/// @title  ERC-XXXX Encrypted Token Standard
 /// @author Kairos Lab (@Valisthea)
 /// @notice Standard interface for tokens with FHE-encrypted balances
 ///         and zero-knowledge transfer verification.
+/// @dev    OMEGA V4 audit: 4C x 3H x 5M x 4L -- all critical fixes applied.
 
 interface IERCXXXX {
 
-    // ─── Custom Errors (OMEGA M-01 fix) ──────────────
+    // ======================== Custom Errors (OMEGA M-01) ========================
+
     error ProofVerificationFailed(bytes32 proofHash);
     error NonceAlreadyUsed(uint256 nonce);
     error InvalidCiphertext();
     error InsufficientEncryptedBalance();
     error KeyVersionMismatch(uint256 expected, uint256 provided);
 
-    // ─── Events ──────────────────────────────────────
+    // ======================== Events ============================================
+
+    /// @dev proofHash non-indexed (OMEGA L-01: preserves 3rd indexed slot).
+    ///      keyVersion enables multi-key and post-rotation log queries.
     event BlindTransfer(
         address indexed from,
         address indexed to,
         bytes32 proofHash,
-        uint256 keyVersion        // OMEGA L-01 fix: non-indexed, room for metadata
+        uint256 keyVersion
     );
+
     event BlindApproval(address indexed owner, address indexed spender);
     event BlindMint(address indexed to, bytes32 indexed proofHash);
     event BlindBurn(address indexed from, bytes32 indexed proofHash);
-    event KeyRotated(uint256 indexed oldVersion, uint256 indexed newVersion);  // OMEGA C-04 fix
 
-    // ─── ERC-20 Compatible ──────────────────────────
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
-    function decimals() external view returns (uint8);
+    /// @notice Emitted on FHE key rotation. (OMEGA C-04)
+    /// @dev    All clients MUST re-encrypt pending ops with the new key.
+    event KeyRotated(uint256 indexed oldVersion, uint256 indexed newVersion);
+
+    // ======================== ERC-20 Compatible Metadata =======================
+
+    function name()        external view returns (string memory);
+    function symbol()      external view returns (string memory);
+    function decimals()    external view returns (uint8);
+
+    /// @dev MAY return 0 if total supply is confidential.
+    ///      See IERCXXXX_ConfidentialSupply for the encrypted variant. (OMEGA C-02)
     function totalSupply() external view returns (uint256);
 
-    // ─── Encrypted Queries ──────────────────────────
-    function encryptedBalanceOf(address account) external view returns (bytes memory);
-    function encryptionScheme() external view returns (string memory);
-    function publicKey() external view returns (bytes memory);
-    function keyVersion() external view returns (uint256);          // OMEGA C-04 fix
-    function isKeyActive(uint256 version) external view returns (bool); // OMEGA C-04 fix
+    // ======================== Encrypted Balance Queries =========================
 
-    // ─── Blind Transfers ────────────────────────────
+    /// @notice Returns the FHE ciphertext of the account balance.
+    /// @dev    SECURITY: Ciphertext changes reveal transaction activity even
+    ///         without decryption. Use constant-size ciphertexts. (OMEGA C-03)
+    function encryptedBalanceOf(address account) external view returns (bytes memory);
+
+    /// @notice FHE scheme identifier (e.g. "TFHE-v0.3", "OpenFHE-BFV").
+    function encryptionScheme() external view returns (string memory);
+
+    /// @notice Contract FHE public key (current key version).
+    function publicKey() external view returns (bytes memory);
+
+    /// @notice Current encryption key version. (OMEGA C-04)
+    function keyVersion() external view returns (uint256);
+
+    /// @notice Returns true if a given key version is still valid. (OMEGA C-04)
+    function isKeyActive(uint256 version) external view returns (bool);
+
+    // ======================== Blind Transfers ===================================
+
+    /// @notice Transfer an encrypted amount to `to`.
+    /// @dev    proof MUST attest: (1) balance >= amount, (2) amount >= 0,
+    ///         (3) correct homomorphic balance updates.
+    ///         publicInputs MUST include chainId + contractAddress. (OMEGA H-03)
     function blindTransfer(
         address to,
         bytes calldata encryptedAmount,
         bytes calldata proof
     ) external returns (bool);
 
+    /// @notice Transfer from `from` to `to` using an encrypted allowance.
     function blindTransferFrom(
         address from,
         address to,
@@ -54,60 +85,86 @@ interface IERCXXXX {
         bytes calldata proof
     ) external returns (bool);
 
-    // ─── Encrypted Approvals ────────────────────────
+    // ======================== Encrypted Approvals ===============================
+
+    /// @notice Approve `spender` for an encrypted allowance.
+    /// @dev    proof attests ONLY: valid ciphertext of a non-negative value.
+    ///         proof MUST NOT require allowance <= balance -- balance check
+    ///         occurs at blindTransferFrom time. (OMEGA H-01)
+    ///         Unlimited approval: encrypt(type(uint256).max) is valid.
     function blindApprove(
         address spender,
         bytes calldata encryptedAmount,
-        bytes calldata proof            // Proof: valid ciphertext, non-negative (OMEGA H-01: NO balance check here)
+        bytes calldata proof
     ) external returns (bool);
 
     function encryptedAllowance(address owner, address spender)
         external view returns (bytes memory);
 
-    // ─── Selective Disclosure (OPTIONAL) ─────────────
-    /// @notice Proof MUST be generated by account owner or authorized delegate.
-    ///         Third-party probing is not possible — proof binds to prover identity.
-    ///         (OMEGA M-04 clarification)
+    // ======================== Selective Disclosure (OPTIONAL) ===================
+
+    /// @notice Verify a balance predicate without revealing the balance.
+    /// @dev    proof MUST be generated by `account` or authorized delegate.
+    ///         proof MUST bind to prover identity -- prevents third-party
+    ///         binary-search probing attacks. (OMEGA M-04)
     function verifyBalancePredicate(
         address account,
         bytes calldata predicate,
         bytes calldata proof
     ) external view returns (bool);
 
-    // ─── Mint / Burn (OPTIONAL) ─────────────────────
+    // ======================== Mint / Burn (OPTIONAL) ============================
+
+    /// @notice Mint encrypted tokens to `to`. Only callable by authorized minter.
     function blindMint(address to, bytes calldata encryptedAmount, bytes calldata proof) external;
+
+    /// @notice Burn encrypted tokens from msg.sender.
     function blindBurn(bytes calldata encryptedAmount, bytes calldata proof) external;
 }
 
-/// @title ERC-XXXX Shielded Extension
-/// @notice Optional bridge between ERC-20 public pool and encrypted pool
-interface IERCXXXX_Shielded is IERCXXXX {        // OMEGA L-03 fix
+// ============================================================================
+// Extension Interfaces
+// ============================================================================
+
+/// @title  ERC-XXXX Shielded Extension (OMEGA L-03)
+/// @notice Optional bridge between ERC-20 public pool and encrypted pool.
+/// @dev    PRIVACY WARNING: shield() amount is plaintext -- publicly visible on-chain.
+///         For maximum privacy, shield in multiple txs of varying amounts over time.
+interface IERCXXXX_Shielded is IERCXXXX {
     event Shielded(address indexed account, uint256 amount);
     event Unshielded(address indexed account, uint256 amount);
+
     function shield(uint256 amount) external;
     function unshield(uint256 amount, bytes calldata proof) external;
 }
 
-/// @title ERC-XXXX Confidential Supply Extension
-/// @notice For tokens that hide total supply             // OMEGA C-02 fix
+/// @title  ERC-XXXX Confidential Supply Extension (OMEGA C-02)
+/// @notice For tokens where totalSupply is itself confidential.
 interface IERCXXXX_ConfidentialSupply is IERCXXXX {
     function totalSupplyEncrypted() external view returns (bytes memory);
 }
 
-/// @title ERC-XXXX Fee Extension
-/// @notice Optional fee interface for FHE computation costs  // OMEGA C-01 fix
+/// @title  ERC-XXXX Fee Extension (OMEGA C-01)
+/// @notice Optional fee interface for FHE computation costs (pGas model).
+/// @dev    feeRecipient is set at deployment, NOT hardcoded in the standard.
+///         STYX Protocol uses pGas in STYX token distributed as:
+///         40% provers, 30% treasury, 20% stakers, 10% burn.
 interface IERCXXXX_Fees is IERCXXXX {
+    /// @notice Emitted when fees are collected. Amount is public (not encrypted).
     event FeeCollected(address indexed payer, address indexed recipient, uint256 amount);
+
     function feeConfig() external view returns (
         address feeRecipient,
         uint256 feeBasisPoints,
         uint256 pGasPerGate
     );
+
     function estimateBlindTransferCost() external view returns (uint256 pGas);
 }
 
-/// @title ERC-XXXX Batch Extension
-/// @notice Batch blind transfers with aggregated proof     // OMEGA M-05 fix
+/// @title  ERC-XXXX Batch Extension (OMEGA M-05)
+/// @notice Batch blind transfers with a single aggregated proof.
+/// @dev    Cheaper than N individual proofs. Nova IVC folding makes this natural.
 interface IERCXXXX_Batch is IERCXXXX {
     function blindBatchTransfer(
         address[] calldata recipients,
